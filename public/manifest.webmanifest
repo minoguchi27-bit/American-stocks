@@ -1,0 +1,11 @@
+{
+  "name": "SIGNAL/US — 米国株 売買シグナル",
+  "short_name": "SIGNAL/US",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#06080d",
+  "theme_color": "#06080d",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
