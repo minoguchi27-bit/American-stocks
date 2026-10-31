@@ -6,6 +6,7 @@ import Home from './pages/Home';
 import { HoldingsPage, WatchPage } from './pages/Lists';
 import Detail from './pages/Detail';
 import SettingsPage from './pages/Settings';
+import { AlertWatcher, Toasts } from './components/AlertWatcher';
 
 const I = {
   home: <path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />,
@@ -54,6 +55,8 @@ export default function App() {
   return (
     <div className="app">
       <TopBar />
+      <Toasts />
+      <AlertWatcher />
       {demo && (
         <button className="demo-banner" onClick={() => go('/settings')}>
           DEMO MODE — 架空データです。売買判断には使えません。<u>API キーを設定</u>

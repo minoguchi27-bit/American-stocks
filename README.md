@@ -17,6 +17,33 @@
 - 決算 7 日前からは強シグナルを 1 段階抑制
 - NYSE 取引時間・休場日・短縮取引に対応
 
+## プッシュ通知
+```
+┌─ ① アプリ内通知 ──────────────┐   ┌─ ② サーバー通知 (アプリを閉じていても) ─────────────┐
+│ アプリ起動中にシグナル変化を検知 │   │ GitHub Actions (取引時間中 15分毎)                   │
+│ → OS通知 + 画面内トースト        │   │ → 同じ判定エンジン → 状態変化のみ → ntfy → スマホ    │
+└──────────────────────────────┘   └────────────────────────────────────────────────┘
+```
+- **通知対象**: 損切り到達・売却推奨（緊急）／利確・一部売却／買い増し候補／検討株の買いシグナル
+- **重複防止**: 状態が変わったときのみ。緊急は継続中なら 1 取引日 1 回再通知
+- **厳格運用**: 判定保留（データ品質 NG）中は売買通知を停止。損切り到達のみ例外
+
+### サーバー通知のセットアップ
+1. スマホに [ntfy](https://ntfy.sh) アプリを入れ、推測されにくいトピック名を購読
+2. GitHub → Settings → Secrets and variables → Actions に登録
+   | Secret | 内容 |
+   |---|---|
+   | `FINNHUB_KEY` / `TWELVEDATA_KEY` | API キー |
+   | `NTFY_TOPIC` | 1 のトピック名 |
+   | `NOTIFY_CONFIG` | アプリ「設定 → 通知用設定をコピー」の内容 |
+   | `NTFY_TOKEN`（任意） | 保護トピックのアクセストークン |
+3. Actions →「Signal notifications」→ Run workflow（mode: test）で受信確認
+4. 保有・ウォッチを変更したら `NOTIFY_CONFIG` を更新
+
+ローカル確認: `NOTIFY_CONFIG=... FINNHUB_KEY=... TWELVEDATA_KEY=... NTFY_TOPIC=... npm run notify -- --dry --force`
+
+> Twelve Data の無料枠（800回/日）はアプリと共有です。サーバー通知は日足を 1 時間ごとに再取得するため、1 銘柄あたり約 7 回/日を消費します。
+
 ## セットアップ
 ```bash
 npm install
@@ -35,6 +62,9 @@ npm run build    # dist/ を静的ホスティング
 src/lib/indicators.ts   SMA/EMA/RSI/MACD/BB/ATR/ADX (純関数)
 src/lib/analysis.ts     スコアリング・判定・エントリー/保有プラン
 src/lib/integrity.ts    データ品質ゲート
+src/lib/engine.ts       銘柄判定エンジン (アプリ/通知で共用)
+src/lib/alerts.ts       通知ルール・重複防止
+scripts/notify.ts       サーバー通知 (GitHub Actions)
 src/lib/market.ts       NYSE カレンダー
 src/lib/providers/      Finnhub / Twelve Data / デモ
 src/state/              設定・保有・ウォッチ (localStorage), データハブ

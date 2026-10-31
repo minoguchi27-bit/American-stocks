@@ -5,6 +5,7 @@ import { cacheClear } from '../lib/providers/http';
 import { fhQuote } from '../lib/providers/finnhub';
 import { tdDaily } from '../lib/providers/twelvedata';
 import { Card } from '../components/ui';
+import { NotifySettings } from '../components/NotifySettings';
 
 export default function SettingsPage() {
   const s = useApp((x) => x.settings);
@@ -53,6 +54,8 @@ export default function SettingsPage() {
           <span>デモモード (架空データ。売買判断に使用不可)</span>
         </label>
       </Card>
+
+      <NotifySettings />
 
       <Card title="判定ロジック">
         <div className="form">

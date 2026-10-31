@@ -95,6 +95,8 @@ export interface Settings {
   riskPerTradePct: number;
   /** 総資産 (USD) ポジションサイズ計算用 */
   accountSize: number;
+  /** アプリ起動中のシグナル通知 */
+  notifyInApp: boolean;
 }
 
 export type SignalLevel = 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL' | 'PENDING';

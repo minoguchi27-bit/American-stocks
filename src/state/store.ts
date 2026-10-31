@@ -20,6 +20,7 @@ const DEFAULT: AppState = {
     atrStopMult: 2,
     riskPerTradePct: 1,
     accountSize: 10000,
+    notifyInApp: false,
   },
   watchlist: [
     { symbol: 'NVDA', addedAt: '2026-01-01' },
