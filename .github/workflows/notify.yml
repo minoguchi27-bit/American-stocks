@@ -1,0 +1,50 @@
+name: Signal notifications
+# 取引時間中 15 分ごとにシグナルを判定し、変化があれば ntfy にプッシュ通知する。
+# 夏時間/冬時間の両方をカバーする UTC 範囲で起動し、取引時間の判定はスクリプト側で行う。
+on:
+  schedule:
+    - cron: '*/15 13-21 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'run = 通常 / test = テスト通知 / dry = 送信せず表示 (時間外でも実行)'
+        type: choice
+        options: [run, test, dry]
+        default: test
+permissions:
+  contents: read
+concurrency: { group: notify, cancel-in-progress: false }
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      # 重複通知防止の状態を前回実行から引き継ぐ
+      - uses: actions/cache/restore@v4
+        with:
+          path: .notify-state
+          key: notify-state-${{ github.run_id }}
+          restore-keys: notify-state-
+      - name: Check signals
+        env:
+          FINNHUB_KEY: ${{ secrets.FINNHUB_KEY }}
+          TWELVEDATA_KEY: ${{ secrets.TWELVEDATA_KEY }}
+          NOTIFY_CONFIG: ${{ secrets.NOTIFY_CONFIG }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          case "${{ inputs.mode }}" in
+            test) npm run notify -- --test ;;
+            dry)  npm run notify -- --dry --force ;;
+            *)    npm run notify ;;
+          esac
+      - uses: actions/cache/save@v4
+        if: always() && hashFiles('.notify-state/state.json') != ''
+        with:
+          path: .notify-state
+          key: notify-state-${{ github.run_id }}
