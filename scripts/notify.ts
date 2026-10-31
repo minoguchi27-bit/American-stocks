@@ -91,6 +91,13 @@ async function main() {
     return;
   }
 
+  // Secret 未登録 (サーバー通知を使わない) 場合は失敗させずに終了
+  const missing = ['NOTIFY_CONFIG', 'NTFY_TOPIC', 'FINNHUB_KEY', 'TWELVEDATA_KEY'].filter((k) => !process.env[k]?.trim());
+  if (missing.length) {
+    console.log(`未設定のため通知をスキップ: ${missing.join(', ')}`);
+    return;
+  }
+
   const now = Date.now();
   const session = marketSession(now);
   const ny = nyParts(now);
