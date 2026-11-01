@@ -7,6 +7,8 @@ export interface AppState {
   settings: Settings;
   watchlist: WatchItem[];
   holdings: Holding[];
+  /** 最終変更時刻 (端末間同期の新旧判定) */
+  updatedAt: number;
 }
 
 const KEY = 'usx-state-v1';
@@ -31,6 +33,7 @@ const DEFAULT: AppState = {
     { id: 'h1', symbol: 'AAPL', shares: 20, avgCost: 190, boughtAt: '2026-03-02' },
     { id: 'h2', symbol: 'INTC', shares: 50, avgCost: 38, boughtAt: '2026-05-11' },
   ],
+  updatedAt: 0,
 };
 
 function load(): AppState {
@@ -51,14 +54,36 @@ export function getState() {
   return state;
 }
 
-export function setState(fn: (s: AppState) => AppState) {
-  state = fn(state);
+function commit(next: AppState) {
+  state = next;
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* noop */ }
   listeners.forEach((l) => l());
 }
 
+/** ユーザー操作による変更 (同期対象として updatedAt を更新) */
+export function setState(fn: (s: AppState) => AppState) {
+  const next = fn(state);
+  if (next === state) return;
+  commit({ ...next, updatedAt: Date.now() });
+}
+
+/** 同期先の内容で置き換え (端末固有の設定は保持) */
+export function applyRemote(p: { holdings: Holding[]; watchlist: WatchItem[]; settings: Omit<Settings, 'notifyInApp'>; updatedAt: number }) {
+  commit({
+    holdings: p.holdings,
+    watchlist: p.watchlist,
+    settings: { ...DEFAULT.settings, ...p.settings, notifyInApp: state.settings.notifyInApp },
+    updatedAt: p.updatedAt,
+  });
+}
+
+export function subscribeApp(l: () => void) {
+  listeners.add(l);
+  return () => { listeners.delete(l); };
+}
+
 export function useApp<T>(sel: (s: AppState) => T): T {
-  return useSyncExternalStore((l) => { listeners.add(l); return () => listeners.delete(l); }, () => sel(state));
+  return useSyncExternalStore(subscribeApp, () => sel(state));
 }
 
 export const normalizeSymbol = (s: string) => s.trim().toUpperCase().replace(/[^A-Z0-9.\-]/g, '');
