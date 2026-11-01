@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { actions, useApp } from '../state/store';
 import { resetData } from '../state/data';
 import { cacheClear } from '../lib/providers/http';
@@ -6,11 +6,14 @@ import { fhQuote } from '../lib/providers/finnhub';
 import { tdDaily } from '../lib/providers/twelvedata';
 import { Card } from '../components/ui';
 import { NotifySettings } from '../components/NotifySettings';
+import { SyncSettings } from '../components/SyncSettings';
 
 export default function SettingsPage() {
   const s = useApp((x) => x.settings);
   const [fk, setFk] = useState(s.finnhubKey);
   const [tk, setTk] = useState(s.twelveDataKey);
+  // 端末間同期でキーが更新されたら入力欄にも反映
+  useEffect(() => { setFk(s.finnhubKey); setTk(s.twelveDataKey); }, [s.finnhubKey, s.twelveDataKey]);
   const [test, setTest] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [io, setIo] = useState('');
@@ -54,6 +57,8 @@ export default function SettingsPage() {
           <span>デモモード (架空データ。売買判断に使用不可)</span>
         </label>
       </Card>
+
+      <SyncSettings />
 
       <NotifySettings />
 

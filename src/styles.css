@@ -336,3 +336,5 @@ code { font-family: 'JetBrains Mono', monospace; font-size: 11px; background: rg
 .toast-urgent { border-left-color: var(--down); box-shadow: 0 0 24px rgba(255, 77, 109, .25), 0 12px 30px rgba(0, 0, 0, .45); }
 .toast-high { border-left-color: var(--warn); }
 @keyframes drop { from { opacity: 0; transform: translateY(-12px); } }
+.seg-full { display: flex; width: 100%; }
+.seg-full button { flex: 1; padding: 8px 6px; font-family: inherit; }

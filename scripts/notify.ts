@@ -3,7 +3,8 @@
 //
 // 環境変数:
 //   FINNHUB_KEY, TWELVEDATA_KEY   データ API キー
-//   NOTIFY_CONFIG                 アプリ「設定 → 通知」でコピーした JSON (保有・ウォッチ・判定パラメータ)
+//   SYNC_CODE                     アプリ「設定 → 端末間同期」の同期コード (推奨: 銘柄・キーの変更が自動反映)
+//   NOTIFY_CONFIG                 SYNC_CODE を使わない場合: アプリでコピーした JSON (保有・ウォッチ・判定パラメータ)
 //   NTFY_TOPIC                    ntfy のトピック名 (推測されにくい文字列)
 //   NTFY_SERVER  (任意)           既定 https://ntfy.sh
 //   NTFY_TOKEN   (任意)           アクセストークン (保護トピック用)
@@ -25,6 +26,8 @@ import { marketSession, nyParts } from '../src/lib/market';
 import { fhFundamentals, fhQuote } from '../src/lib/providers/finnhub';
 import { tdDaily } from '../src/lib/providers/twelvedata';
 import { parseNotifyConfig } from '../src/lib/notifyConfig';
+import type { NotifyConfig } from '../src/lib/notifyConfig';
+import { decodeSyncCode, pullSync } from '../src/lib/sync';
 
 const args = new Set(process.argv.slice(2));
 const DRY = args.has('--dry');
@@ -84,6 +87,23 @@ function defaultAppUrl() {
   return `https://${owner.toLowerCase()}.github.io/${name}/`;
 }
 
+/** 設定の取得: 同期コードがあれば同期先 (暗号化 Gist) から、なければ個別の Secret から */
+async function loadConfig(): Promise<{ cfg: NotifyConfig; fk: string; tk: string }> {
+  if (process.env.SYNC_CODE?.trim()) {
+    const p = await pullSync(decodeSyncCode(env('SYNC_CODE')));
+    const fk = process.env.FINNHUB_KEY?.trim() || p.settings.finnhubKey;
+    const tk = process.env.TWELVEDATA_KEY?.trim() || p.settings.twelveDataKey;
+    if (!fk || !tk) throw new Error('API キーがありません (アプリで設定するか FINNHUB_KEY / TWELVEDATA_KEY を登録)');
+    const cfg = parseNotifyConfig(JSON.stringify({
+      v: 1, holdings: p.holdings, watchlist: p.watchlist,
+      settings: { techWeight: p.settings.techWeight, atrStopMult: p.settings.atrStopMult, accountSize: p.settings.accountSize, riskPerTradePct: p.settings.riskPerTradePct },
+    }));
+    console.log(`同期先から設定を読み込み (更新 ${new Date(p.updatedAt).toISOString()})`);
+    return { cfg, fk, tk };
+  }
+  return { cfg: parseNotifyConfig(env('NOTIFY_CONFIG')), fk: env('FINNHUB_KEY'), tk: env('TWELVEDATA_KEY') };
+}
+
 async function main() {
   if (args.has('--test')) {
     await send({ title: '✅ SIGNAL/US テスト通知', body: '通知の設定は正常です。取引時間中のシグナルをお知らせします。', priority: 'default' });
@@ -92,7 +112,10 @@ async function main() {
   }
 
   // Secret 未登録 (サーバー通知を使わない) 場合は失敗させずに終了
-  const missing = ['NOTIFY_CONFIG', 'NTFY_TOPIC', 'FINNHUB_KEY', 'TWELVEDATA_KEY'].filter((k) => !process.env[k]?.trim());
+  const has = (k: string) => !!process.env[k]?.trim();
+  const missing = has('SYNC_CODE')
+    ? ['NTFY_TOPIC'].filter((k) => !has(k))
+    : ['NOTIFY_CONFIG', 'NTFY_TOPIC', 'FINNHUB_KEY', 'TWELVEDATA_KEY'].filter((k) => !has(k));
   if (missing.length) {
     console.log(`未設定のため通知をスキップ: ${missing.join(', ')}`);
     return;
@@ -108,9 +131,7 @@ async function main() {
     return;
   }
 
-  const cfg = parseNotifyConfig(env('NOTIFY_CONFIG'));
-  const fk = env('FINNHUB_KEY');
-  const tk = env('TWELVEDATA_KEY');
+  const { cfg, fk, tk } = await loadConfig();
   const settings: EngineSettings = cfg.settings;
   const state = loadState();
 

@@ -33,18 +33,29 @@
 2. GitHub → Settings → Secrets and variables → Actions に登録
    | Secret | 内容 |
    |---|---|
-   | `FINNHUB_KEY` / `TWELVEDATA_KEY` | API キー |
    | `NTFY_TOPIC` | 1 のトピック名 |
-   | `NOTIFY_CONFIG` | アプリ「設定 → 通知用設定をコピー」の内容 |
+   | `SYNC_CODE` | アプリ「設定 → 端末間同期 → 同期コードをコピー」（推奨。銘柄・キーの変更が自動反映） |
    | `NTFY_TOKEN`（任意） | 保護トピックのアクセストークン |
+
+   同期を使わない場合は `SYNC_CODE` の代わりに `FINNHUB_KEY` `TWELVEDATA_KEY` `NOTIFY_CONFIG`（アプリでコピー）を登録
 3. Actions →「Signal notifications」→ Run workflow（mode: test）で受信確認
-4. 保有・ウォッチを変更したら `NOTIFY_CONFIG` を更新
 
 ローカル確認: `NOTIFY_CONFIG=... FINNHUB_KEY=... TWELVEDATA_KEY=... NTFY_TOPIC=... npm run notify -- --dry --force`
 
 > Twelve Data の無料枠（800回/日）はアプリと共有です。サーバー通知は日足を 1 時間ごとに再取得するため、1 銘柄あたり約 7 回/日を消費します。
 
-## セットアップ
+## 端末間同期
+iPhone・iPad など複数端末で保有・ウォッチ・API キー・判定設定を自動で揃える。
+```
+端末A ──暗号化(AES-256-GCM)──▶ GitHub 非公開 Gist ◀──復号── 端末B / サーバー通知
+          鍵は「同期コード」の中だけ（Gist 単体では読めない）
+```
+1. データが揃った端末で 設定 → 端末間同期 → [トークン作成](https://github.com/settings/tokens/new?scopes=gist&description=SIGNAL-US%20sync)（権限 gist のみ）→ 貼り付けて「同期を開始」
+2. 「同期コードをコピー」→ 他の端末で「同期コードで接続」に貼り付け
+- 変更は約 1.5 秒後に送信、起動時・復帰時・60 秒ごとに受信。新しい方を採用（後勝ち）
+- 通知のオン/オフは端末ごと
+- 同期コードはパスワード相当。漏れた場合は GitHub でトークンを削除して作り直す
+
 ```bash
 npm install
 npm run dev      # http://localhost:5173
@@ -64,6 +75,7 @@ src/lib/analysis.ts     スコアリング・判定・エントリー/保有プ�
 src/lib/integrity.ts    データ品質ゲート
 src/lib/engine.ts       銘柄判定エンジン (アプリ/通知で共用)
 src/lib/alerts.ts       通知ルール・重複防止
+src/lib/sync.ts         端末間同期 (暗号化 Gist)
 scripts/notify.ts       サーバー通知 (GitHub Actions)
 src/lib/market.ts       NYSE カレンダー
 src/lib/providers/      Finnhub / Twelve Data / デモ

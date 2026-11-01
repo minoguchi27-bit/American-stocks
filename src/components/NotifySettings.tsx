@@ -48,13 +48,16 @@ export function NotifySettings() {
         <ol className="steps">
           <li>スマホに <a href="https://ntfy.sh" target="_blank" rel="noreferrer">ntfy</a> アプリを入れ、推測されにくいトピック名 (例: <code>signal-us-8f3k2q</code>) を購読</li>
           <li>GitHub の Settings → Secrets and variables → Actions に登録:<br />
-            <code>FINNHUB_KEY</code> <code>TWELVEDATA_KEY</code> <code>NTFY_TOPIC</code> <code>NOTIFY_CONFIG</code></li>
-          <li>下のボタンでコピーした内容を <code>NOTIFY_CONFIG</code> に貼り付け</li>
+            <code>NTFY_TOPIC</code> と <code>SYNC_CODE</code> (上の「端末間同期」の同期コード)</li>
           <li>Actions →「Signal notifications」→ Run workflow (test) で受信を確認</li>
         </ol>
-        <button className="btn-pri" onClick={copyConfig}>通知用設定をコピー ({holdings.length + watch.length}銘柄)</button>
-        {copied && <small className="muted copied">{copied}</small>}
-        <small className="muted">保有・ウォッチを変更したら再コピーして Secret を更新してください。API キーは含まれません。</small>
+        <small className="muted">同期コードを使うと、銘柄や API キーの変更がサーバー通知にも自動で反映されます。</small>
+        <details>
+          <summary className="muted small">同期を使わない場合</summary>
+          <small className="muted">Secret に <code>FINNHUB_KEY</code> <code>TWELVEDATA_KEY</code> <code>NOTIFY_CONFIG</code> を登録。NOTIFY_CONFIG は下のボタンでコピーし、銘柄を変更するたびに更新してください。</small>
+          <button className="btn-sec" style={{ marginTop: 8, width: '100%' }} onClick={copyConfig}>通知用設定をコピー ({holdings.length + watch.length}銘柄)</button>
+          {copied && <small className="muted copied">{copied}</small>}
+        </details>
       </div>
 
       <ul className="notes">
